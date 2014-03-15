@@ -66,7 +66,8 @@
         display:"inline-block", border:0, padding:0, margin:0,
         "background-color":"white", opacity:0, filter:"alpha(opacity=0)"
       }
-    }
+    },
+    bodyDiv: false
   });
   
   var FALSE, HOVER, EVENT;
@@ -154,10 +155,14 @@
       var zoom = div.lastChild, span = zoom.firstChild, overlay = div.firstChild;
 
       // [klortho] put the zoom frame in a special place
-      //math.parentNode.insertBefore(div,math); math.parentNode.insertBefore(math,div); // put div after math
-      div.setAttribute("data-mathdiv-id", math.getAttribute("id"));;
-      document.getElementById("MathJax_ZoomWrapper").appendChild(div);
-      
+      if (!CONFIG.bodyDiv) {
+        math.parentNode.insertBefore(div,math); 
+        math.parentNode.insertBefore(math,div); // put div after math
+      }
+      else {
+        div.setAttribute("data-mathdiv-id", math.getAttribute("id"));
+        this.WrapperDiv().appendChild(div);
+      }
       
       
       
@@ -180,8 +185,7 @@
         });
         
         // [klortho] relative -> absolute
-        //div.style.position = "relative";
-        div.style.position = "absolute";
+        div.style.position = CONFIG.bodyDiv ? "absolute" : "relative";
         
         div.style.zIndex = CONFIG.styles["#MathJax_ZoomOverlay"]["z-index"];
         div = tracker;
@@ -227,6 +231,29 @@
       //
       return FALSE(event);
     },
+
+    // [klortho] Only used when bodyDiv is true.
+    WrapperDiv: function() {
+      var wrapper_id = "MathJax_ZoomWrapper";
+      
+      if (!this.hasOwnProperty("wrapperDiv")) {
+        // See if one already exists in the DOM
+        var wd = document.getElementById(wrapper_id);
+        if (!wd) {
+          // Create a new wrapper div 
+          wd = HTML.Element("div", {id: "MathJax_ZoomWrapper"});
+          if (!document.body.firstChild) {
+            document.body.appendChild(wd)
+          }
+          else {
+            document.body.insertBefore(wd, document.body.firstChild)
+          }
+        }
+        this.wrapperDiv = wd;
+      }
+      return this.wrapperDiv;
+    },
+
     
     //
     //  Set the position of the zoom box and overlay
@@ -236,27 +263,33 @@
       var dx = -W-Math.floor((zoom.offsetWidth-W)/2), dy = bbox.Y;
 
       // [klortho] Here is where we want to inject the new position
-      //zoom.style.left = Math.max(dx,10-x)+"px"; zoom.style.top = Math.max(dy,10-y)+"px";
-      var $math = $(math);
-      var math_offset = $math.offset();
-      var math_left = math_offset.left;
-      var math_center_x = math_left + Math.floor(bbox.mW / 2);
-      var zoom_left_w = math_center_x - Math.floor(zoom.offsetWidth / 2);
-      var client_width = document.body.clientWidth;
-      var margin_x = Math.floor(Math.min(10, (client_width - zoom.offsetWidth) / 2));
-      var max_left = client_width - margin_x - zoom.offsetWidth;
-      var zoom_left = Math.min(Math.max(zoom_left_w, margin_x), max_left);
-      zoom.style.left = zoom_left + "px";
+      if (!CONFIG.bodyDiv) {
+        zoom.style.left = Math.max(dx,10-x)+"px"; 
+        zoom.style.top = Math.max(dy,10-y)+"px";
+      }
+      else {
+        var $ = jQuery;
+        var $math = $(math);
+        var math_offset = $math.offset();
+        var math_left = math_offset.left;
+        var math_center_x = math_left + Math.floor(bbox.mW / 2);
+        var zoom_left_w = math_center_x - Math.floor(zoom.offsetWidth / 2);
+        var client_width = document.body.clientWidth;
+        var margin_x = Math.floor(Math.min(10, (client_width - zoom.offsetWidth) / 2));
+        var max_left = client_width - margin_x - zoom.offsetWidth;
+        var zoom_left = Math.min(Math.max(zoom_left_w, margin_x), max_left);
+        zoom.style.left = zoom_left + "px";
 
-      var math_top  = math_offset.top;
-      var math_center_y = math_top + Math.floor(bbox.mH / 2);
-      var zoom_top_w  = math_center_y - Math.floor(zoom.offsetHeight / 2);
-      var viewport_top = $(document).scrollTop();
-      var viewport_height = $(window).height();
-      var margin_y = Math.floor(Math.min(10, (viewport_height - zoom.offsetHeight) / 2));
-      var max_top = viewport_top + viewport_height - margin_y - zoom.offsetHeight;
-      var zoom_top = Math.min(Math.max(zoom_top_w, viewport_top + margin_y), max_top);
-      zoom.style.top  = zoom_top + "px";
+        var math_top  = math_offset.top;
+        var math_center_y = math_top + Math.floor(bbox.mH / 2);
+        var zoom_top_w  = math_center_y - Math.floor(zoom.offsetHeight / 2);
+        var viewport_top = $(document).scrollTop();
+        var viewport_height = $(window).height();
+        var margin_y = Math.floor(Math.min(10, (viewport_height - zoom.offsetHeight) / 2));
+        var max_top = viewport_top + viewport_height - margin_y - zoom.offsetHeight;
+        var zoom_top = Math.min(Math.max(zoom_top_w, viewport_top + margin_y), max_top);
+        zoom.style.top  = zoom_top + "px";
+      }
 
       if (!ZOOM.msiePositionBug) {ZOOM.SetWH()} // refigure overlay width/height
     },
@@ -327,12 +360,16 @@
       if (div) {
 
         // [klortho] Fix how we get the math div and its corresponding jax
-        //var JAX = MathJax.OutputJax[div.previousSibling.jaxID];
-        //var jax = JAX.getJaxFromMath(div.previousSibling);
-        var mathdiv_id = div.getAttribute("data-mathdiv-id");
-        var mathdiv = document.getElementById(mathdiv_id);
-        var JAX = MathJax.OutputJax[mathdiv.jaxID];
-        var jax = JAX.getJaxFromMath(mathdiv);
+        if (!CONFIG.bodyDiv) {
+          var JAX = MathJax.OutputJax[div.previousSibling.jaxID];
+          var jax = JAX.getJaxFromMath(div.previousSibling);
+        }
+        else {
+          var mathdiv_id = div.getAttribute("data-mathdiv-id");
+          var mathdiv = document.getElementById(mathdiv_id);
+          var JAX = MathJax.OutputJax[mathdiv.jaxID];
+          var jax = JAX.getJaxFromMath(mathdiv);
+        }
 
         HUB.signal.Post(["math unzoomed",jax]);
         div.parentNode.removeChild(div);
