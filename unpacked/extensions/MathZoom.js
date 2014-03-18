@@ -161,6 +161,7 @@
       }
       else {
         div.setAttribute("data-mathdiv-id", math.getAttribute("id"));
+        div.style.position = "absolute";
         this.WrapperDiv().appendChild(div);
       }
       
@@ -184,12 +185,10 @@
           style:{width:0, height:0, position:"relative"}
         });
         
-        // [klortho] relative -> absolute
-        div.style.position = CONFIG.bodyDiv ? "absolute" : "relative";
-        
         div.style.zIndex = CONFIG.styles["#MathJax_ZoomOverlay"]["z-index"];
         div = tracker;
       }
+
 
       var bbox = JAX.Zoom(jax,span,math,Mw,Mh);  // Mw, Mh => max width, height
       
@@ -260,34 +259,43 @@
     //
     Position: function (zoom,bbox, math) {
       var XY = this.Resize(), x = XY.x, y = XY.y, W = bbox.mW;
+
+      // [klortho] Bug #749
+      var svg = zoom.getElementsByTagName('svg')[0];
+      if (svg && zoom.offsetWidth < svg.offsetWidth) { // looks like the bug
+        zoom.style.width = svg.offsetWidth + "px";
+      }
+
       var dx = -W-Math.floor((zoom.offsetWidth-W)/2), dy = bbox.Y;
+      
 
       // [klortho] Here is where we want to inject the new position
       if (!CONFIG.bodyDiv) {
         zoom.style.left = Math.max(dx,10-x)+"px"; 
         zoom.style.top = Math.max(dy,10-y)+"px";
+        console.info("left: " + zoom.style.left + ", top: " + zoom.style.top);
       }
       else {
         var $ = jQuery;
-        var $math = $(math);
-        var math_offset = $math.offset();
-        var math_left = math_offset.left;
-        var math_center_x = math_left + Math.floor(bbox.mW / 2);
-        var zoom_left_w = math_center_x - Math.floor(zoom.offsetWidth / 2);
-        var client_width = document.body.clientWidth;
-        var margin_x = Math.floor(Math.min(10, (client_width - zoom.offsetWidth) / 2));
-        var max_left = client_width - margin_x - zoom.offsetWidth;
-        var zoom_left = Math.min(Math.max(zoom_left_w, margin_x), max_left);
+        var $math = $(math),
+            math_offset = $math.offset(),
+            math_left = math_offset.left,
+            math_center_x = math_left + Math.floor(bbox.mW / 2),
+            zoom_left_w = math_center_x - Math.floor(zoom.offsetWidth / 2),
+            client_width = document.body.clientWidth,
+            margin_x = Math.floor(Math.min(10, (client_width - zoom.offsetWidth) / 2)),
+            max_left = client_width - margin_x - zoom.offsetWidth,
+            zoom_left = Math.min(Math.max(zoom_left_w, margin_x), max_left);
         zoom.style.left = zoom_left + "px";
 
-        var math_top  = math_offset.top;
-        var math_center_y = math_top + Math.floor(bbox.mH / 2);
-        var zoom_top_w  = math_center_y - Math.floor(zoom.offsetHeight / 2);
-        var viewport_top = $(document).scrollTop();
-        var viewport_height = $(window).height();
-        var margin_y = Math.floor(Math.min(10, (viewport_height - zoom.offsetHeight) / 2));
-        var max_top = viewport_top + viewport_height - margin_y - zoom.offsetHeight;
-        var zoom_top = Math.min(Math.max(zoom_top_w, viewport_top + margin_y), max_top);
+        var math_top  = math_offset.top,
+            math_center_y = math_top + Math.floor(bbox.mH / 2),
+            zoom_top_w  = math_center_y - Math.floor(zoom.offsetHeight / 2),
+            viewport_top = $(document).scrollTop(),
+            viewport_height = $(window).height(),
+            margin_y = Math.floor(Math.min(10, (viewport_height - zoom.offsetHeight) / 2)),
+            max_top = viewport_top + viewport_height - margin_y - zoom.offsetHeight,
+            zoom_top = Math.min(Math.max(zoom_top_w, viewport_top + margin_y), max_top);
         zoom.style.top  = zoom_top + "px";
       }
 
