@@ -245,7 +245,8 @@
             document.body.appendChild(wd)
           }
           else {
-            document.body.insertBefore(wd, document.body.firstChild)
+            // Insert as the last div in the body.
+            document.body.insertBefore(wd, null)
           }
         }
         this.wrapperDiv = wd;
@@ -296,6 +297,7 @@
             margin_y = Math.floor(Math.min(10, (viewport_height - zoom.offsetHeight) / 2)),
             max_top = viewport_top + viewport_height - margin_y - zoom.offsetHeight,
             zoom_top = Math.min(Math.max(zoom_top_w, viewport_top + margin_y), max_top);
+        if (CONFIG.pubreader) zoom_top = zoom_top - viewport_height;
         zoom.style.top  = zoom_top + "px";
       }
 
