@@ -4,20 +4,20 @@
 /*************************************************************
  *
  *  MathJax/extensions/MathZoom.js
- *  
+ *
  *  Implements the zoom feature for enlarging math expressions.  It is
  *  loaded automatically when the Zoom menu selection changes from "None".
  *
  *  ---------------------------------------------------------------------
- *  
+ *
  *  Copyright (c) 2010-2013 The MathJax Consortium
- * 
+ *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,7 @@
 
 (function (HUB,HTML,AJAX,HTMLCSS,nMML) {
   var VERSION = "2.3";
-  
+
   var CONFIG = HUB.CombineConfig("MathZoom",{
     styles: {
       //
@@ -46,7 +46,7 @@
         "-khtml-box-shadow":"5px 5px 15px #AAAAAA",  // Konqueror
         filter: "progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')" // IE
       },
-      
+
       //
       //  The styles for the hidden overlay (should not need to be adjusted by the page author)
       //
@@ -55,12 +55,12 @@
         width:"100%", height:"100%", border:0, padding:0, margin:0,
         "background-color":"white", opacity:0, filter:"alpha(opacity=0)"
       },
-      
+
       "#MathJax_ZoomFrame": {
         position:"relative", display:"inline-block",
         height:0, width:0
       },
-      
+
       "#MathJax_ZoomEventTrap": {
         position:"absolute", left:0, top:0, "z-index":302,
         display:"inline-block", border:0, padding:0, margin:0,
@@ -69,7 +69,7 @@
     },
     bodyDiv: false
   });
-  
+
   var FALSE, HOVER, EVENT;
   MathJax.Hub.Register.StartupHook("MathEvents Ready",function () {
     EVENT = MathJax.Extension.MathEvents.Event;
@@ -95,21 +95,21 @@
       if (!ZOOM[type]) return true;
       return ZOOM[type](event,math);
     },
-    
+
     //
     //  Zoom on click
     //
     Click: function (event,math) {
       if (this.settings.zoom === "Click") {return this.Zoom(event,math)}
     },
-    
+
     //
     //  Zoom on double click
     //
     DblClick: function (event,math) {
       if (this.settings.zoom === "Double-Click" || this.settings.zoom === "DoubleClick") {return this.Zoom(event,math)}
     },
-    
+
     //
     //  Zoom on hover (called by MathEvents.Hover)
     //
@@ -117,8 +117,8 @@
       if (this.settings.zoom === "Hover") {this.Zoom(event,math); return true}
       return false;
     },
-    
-    
+
+
     //
     //  Handle the actual zooming
     //
@@ -156,7 +156,7 @@
 
       // [klortho] put the zoom frame in a special place
       if (!CONFIG.bodyDiv) {
-        math.parentNode.insertBefore(div,math); 
+        math.parentNode.insertBefore(div,math);
         math.parentNode.insertBefore(math,div); // put div after math
       }
       else {
@@ -164,11 +164,11 @@
         div.style.position = "absolute";
         this.WrapperDiv().appendChild(div);
       }
-      
-      
-      
+
+
+
       if (span.addEventListener) {span.addEventListener("mousedown",this.Remove,true)}
-      
+
       if (this.msieTrapEventBug) {
         var trap = HTML.Element("span",{id:"MathJax_ZoomEventTrap", onmousedown:this.Remove});
         div.insertBefore(trap,zoom);
@@ -184,24 +184,38 @@
           src:"about:blank", id:"MathJax_ZoomTracker", width:0, height:0,
           style:{width:0, height:0, position:"relative"}
         });
-        
+
         div.style.zIndex = CONFIG.styles["#MathJax_ZoomOverlay"]["z-index"];
         div = tracker;
       }
 
 
       var bbox = JAX.Zoom(jax,span,math,Mw,Mh);  // Mw, Mh => max width, height
-      
+
       //
       //  Fix up size and position for browsers with bugs (IE)
       //
       if (this.msiePositionBug) {
-        if (this.msieSizeBug) 
+        if (this.msieSizeBug)
           {zoom.style.height = bbox.zH+"px"; zoom.style.width = bbox.zW+"px"} // IE8 gets the dimensions completely wrong
         if (zoom.offsetHeight > Mh) {zoom.style.height = Mh+"px"; zoom.style.width = (bbox.zW+this.scrollSize)+"px"}  // IE doesn't do max-height?
         if (zoom.offsetWidth  > Mw) {zoom.style.width  = Mw+"px"; zoom.style.height = (bbox.zH+this.scrollSize)+"px"}
       }
       if (this.operaPositionBug) {zoom.style.width = Math.min(Mw,bbox.zW)+"px"}  // Opera gets width as 0?
+
+      // [klortho]
+      // Chrome (webkit) with SVG: #749: if width is just padding+border, but there's
+      // an svg child with non-zero width, assume it's this bug
+      var zcs = window.getComputedStyle(zoom),
+          zbp = parseInt(zcs.getPropertyValue("border-left-width")) +
+                parseInt(zcs.getPropertyValue("padding-left")) +
+                parseInt(zcs.getPropertyValue("padding-right")) +
+                parseInt(zcs.getPropertyValue("border-right-width"));
+      var svg = zoom.getElementsByTagName('svg')[0];
+      if (svg && zoom.offsetWidth == zbp) { // looks like the bug
+        zoom.style.width = svg.offsetWidth + "px";
+      }
+
       if (zoom.offsetWidth && zoom.offsetWidth < Mw && zoom.offsetHeight < Mh)
          {zoom.style.overflow = "visible"}  // don't show scroll bars if we don't need to
       this.Position(zoom,bbox, math);
@@ -219,12 +233,12 @@
       if (window.addEventListener) {addEventListener("resize",this.Resize,false)}
       else if (window.attachEvent) {attachEvent("onresize",this.Resize)}
       else {this.onresize = window.onresize; window.onresize = this.Resize}
-      
+
       //
       //  Let others know about the zoomed math
       //
       HUB.signal.Post(["math zoomed",jax]);
-      
+
       //
       //  Cancel further actions
       //
@@ -234,12 +248,12 @@
     // [klortho] Only used when bodyDiv is true.
     WrapperDiv: function() {
       var wrapper_id = "MathJax_ZoomWrapper";
-      
+
       if (!this.hasOwnProperty("wrapperDiv")) {
         // See if one already exists in the DOM
         var wd = document.getElementById(wrapper_id);
         if (!wd) {
-          // Create a new wrapper div 
+          // Create a new wrapper div
           wd = HTML.Element("div", {id: "MathJax_ZoomWrapper"});
           if (!document.body.firstChild) {
             document.body.appendChild(wd)
@@ -254,25 +268,18 @@
       return this.wrapperDiv;
     },
 
-    
+
     //
     //  Set the position of the zoom box and overlay
     //
     Position: function (zoom,bbox, math) {
       var XY = this.Resize(), x = XY.x, y = XY.y, W = bbox.mW;
 
-      // [klortho] Bug #749
-      var svg = zoom.getElementsByTagName('svg')[0];
-      if (svg && zoom.offsetWidth < svg.offsetWidth) { // looks like the bug
-        zoom.style.width = svg.offsetWidth + "px";
-      }
-
       var dx = -W-Math.floor((zoom.offsetWidth-W)/2), dy = bbox.Y;
-      
 
       // [klortho] Here is where we want to inject the new position
       if (!CONFIG.bodyDiv) {
-        zoom.style.left = Math.max(dx,10-x)+"px"; 
+        zoom.style.left = Math.max(dx,10-x)+"px";
         zoom.style.top = Math.max(dy,10-y)+"px";
         console.info("left: " + zoom.style.left + ", top: " + zoom.style.top);
       }
@@ -303,7 +310,7 @@
 
       if (!ZOOM.msiePositionBug) {ZOOM.SetWH()} // refigure overlay width/height
     },
-    
+
     //
     //  Handle resizing of overlay while zoom is displayed
     //
@@ -343,7 +350,7 @@
       function (obj) {return (obj.currentStyle||{overflow:"visible"}).overflow}),
     getBorder: function (obj) {
       var size = {thin: 1, medium: 2, thick: 3};
-      var style = (window.getComputedStyle ? getComputedStyle(obj) : 
+      var style = (window.getComputedStyle ? getComputedStyle(obj) :
                      (obj.currentStyle || {borderLeftWidth:0,borderTopWidth:0}));
       var x = style.borderLeftWidth, y = style.borderTopWidth;
       if (size[x]) {x = size[x]} else {x = parseInt(x)}
@@ -361,7 +368,7 @@
       if (ZOOM.operaPositionBug) {div.style.border = ""}
       return {x:x, y:y};
     },
-    
+
     //
     //  Remove zoom display and event handlers
     //
@@ -401,10 +408,10 @@
       }
       return FALSE(event);
     }
-    
+
   };
-  
-  
+
+
   /*************************************************************/
 
   HUB.Browser.Select({
@@ -420,13 +427,13 @@
       if (document.compatMode === "BackCompat") {ZOOM.scrollSize = 52} // don't know why this is so far off
       if (isIE9) {delete CONFIG.styles["#MathJax_Zoom"].filter}
     },
-    
+
     Opera: function (browser) {
       ZOOM.operaPositionBug = true;
       ZOOM.operaRefreshBug = true;
     }
   });
-  
+
   ZOOM.topImg = (ZOOM.msieInlineBlockAlignBug ?
     HTML.Element("img",{style:{width:0,height:0,position:"relative"},src:"about:blank"}) :
     HTML.Element("span",{style:{width:0,height:0,display:"inline-block"}})
