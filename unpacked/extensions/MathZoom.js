@@ -206,14 +206,17 @@
       // [klortho]
       // Chrome (webkit) with SVG: #749: if width is just padding+border, but there's
       // an svg child with non-zero width, assume it's this bug
-      var zcs = window.getComputedStyle(zoom),
-          zbp = parseInt(zcs.getPropertyValue("border-left-width")) +
-                parseInt(zcs.getPropertyValue("padding-left")) +
-                parseInt(zcs.getPropertyValue("padding-right")) +
-                parseInt(zcs.getPropertyValue("border-right-width"));
-      var svg = zoom.getElementsByTagName('svg')[0];
-      if (svg && zoom.offsetWidth == zbp) { // looks like the bug
-        zoom.style.width = svg.offsetWidth + "px";
+      if (MathJax.Hub.Browser.isChrome || MathJax.Hub.Browser.isSafari) {
+        var zcs = window.getComputedStyle(zoom),
+            zbp = parseInt(zcs.getPropertyValue("border-left-width")) +
+                  parseInt(zcs.getPropertyValue("padding-left")) +
+                  parseInt(zcs.getPropertyValue("padding-right")) +
+                  parseInt(zcs.getPropertyValue("border-right-width"));
+        var svg = zoom.getElementsByTagName('svg')[0];
+        if (svg && zoom.offsetWidth == zbp) { // looks like the bug
+          zoom.style.width = svg.offsetWidth + "px";
+        }
+        
       }
 
       if (zoom.offsetWidth && zoom.offsetWidth < Mw && zoom.offsetHeight < Mh)
