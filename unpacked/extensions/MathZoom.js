@@ -26,7 +26,7 @@
  */
 
 (function (HUB,HTML,AJAX,HTMLCSS,nMML) {
-  var VERSION = "2.3";
+  var VERSION = "2.3-pmc";
 
   var CONFIG = HUB.CombineConfig("MathZoom",{
     styles: {
@@ -138,33 +138,53 @@
       //
       //  Create the DOM elements for the zoom box
       //
-      var Mw = Math.floor(.85*document.body.clientWidth),
-          Mh = Math.floor(.85*Math.max(document.body.clientHeight,document.documentElement.clientHeight));
+      var Mw = Math.floor(document.body.clientWidth - 100),
+          Mh = Math.floor(Math.max(document.body.clientHeight, document.documentElement.clientHeight) - 100);
       var div = HTML.Element(
-        "span",{id:"MathJax_ZoomFrame"},[
-          ["span",{id:"MathJax_ZoomOverlay", onmousedown:this.Remove}],
-          ["span",{
-            id:"MathJax_Zoom", onclick:this.Remove,
-            style:{
-              visibility:"hidden", fontSize:this.settings.zscale,
-              "max-width":Mw+"px", "max-height":Mh+"px"
-            }
-          },[["span",{style:{display:"inline-block", "white-space":"nowrap"}}]]
-        ]]
+        "span", 
+        { id: "MathJax_ZoomFrame" }, 
+        [ [ "span", 
+            { id: "MathJax_ZoomOverlay", 
+              onmousedown: this.Remove }
+          ],
+          [ "span", 
+            { id: "MathJax_Zoom", 
+              onclick: this.Remove,
+              style: {
+                visibility: "hidden", 
+                fontSize: this.settings.zscale,
+                "max-width": Mw+"px", 
+                "max-height": Mh+"px"
+              }
+            }, 
+            [ [ "span",
+                { style: {
+                    display: "inline-block", 
+                    "white-space": "nowrap" }
+                }
+              ]
+            ]
+          ]
+        ]
       );
-      var zoom = div.lastChild, span = zoom.firstChild, overlay = div.firstChild;
+      var zoom = div.lastChild, 
+          span = zoom.firstChild, 
+          overlay = div.firstChild;
 
-      // [klortho] put the zoom frame in a special place
-      if (!CONFIG.bodyDiv) {
-        math.parentNode.insertBefore(div,math);
-        math.parentNode.insertBefore(math,div); // put div after math
-      }
-      else {
+      // [klortho] With new configuration option bodyDiv, we'll put the zoom frame in a 
+      // special place, as the last child of the body.
+      if (CONFIG.bodyDiv) {
+        // Set an attribute on the ZoomFrame that let's us find our way back to the 
+        // original equation
         div.setAttribute("data-mathdiv-id", math.getAttribute("id"));
         div.style.position = "absolute";
         this.WrapperDiv().appendChild(div);
       }
-
+      else {
+        // default
+        math.parentNode.insertBefore(div,math);
+        math.parentNode.insertBefore(math,div); // put div after math
+      }
 
 
       if (span.addEventListener) {span.addEventListener("mousedown",this.Remove,true)}
@@ -189,7 +209,6 @@
         div = tracker;
       }
 
-
       var bbox = JAX.Zoom(jax,span,math,Mw,Mh);  // Mw, Mh => max width, height
 
       //
@@ -206,21 +225,25 @@
       // [klortho]
       // Chrome (webkit) with SVG: #749: if width is just padding+border, but there's
       // an svg child with non-zero width, assume it's this bug
-      if (MathJax.Hub.Browser.isChrome || MathJax.Hub.Browser.isSafari) {
+      var svg = zoom.getElementsByTagName('svg')[0];
+      if (svg && (MathJax.Hub.Browser.isChrome || MathJax.Hub.Browser.isSafari)) {
         var zcs = window.getComputedStyle(zoom),
             zbp = parseInt(zcs.getPropertyValue("border-left-width")) +
                   parseInt(zcs.getPropertyValue("padding-left")) +
                   parseInt(zcs.getPropertyValue("padding-right")) +
                   parseInt(zcs.getPropertyValue("border-right-width"));
-        var svg = zoom.getElementsByTagName('svg')[0];
-        if (svg && zoom.offsetWidth == zbp) { // looks like the bug
+        if (zoom.offsetWidth == zbp) { // looks like the bug
           zoom.style.width = svg.offsetWidth + "px";
         }
         
       }
 
-      if (zoom.offsetWidth && zoom.offsetWidth < Mw && zoom.offsetHeight < Mh)
-         {zoom.style.overflow = "visible"}  // don't show scroll bars if we don't need to
+      // [klortho] Commenting out the following lines causes some spurious scrollbars to
+      // appear sometimes.  But the alternative is worse, often scrollbars don't show up
+      // where they should.
+      //if (zoom.offsetWidth && zoom.offsetWidth < Mw && zoom.offsetHeight < Mh)
+      //   {zoom.style.overflow = "visible"}  // don't show scroll bars if we don't need to
+      
       this.Position(zoom,bbox, math);
       if (this.msieTrapEventBug) {
         trap.style.height = zoom.clientHeight+"px"; trap.style.width = zoom.clientWidth+"px";
@@ -257,7 +280,14 @@
         var wd = document.getElementById(wrapper_id);
         if (!wd) {
           // Create a new wrapper div
-          wd = HTML.Element("div", {id: "MathJax_ZoomWrapper"});
+          wd = HTML.Element("div", {
+            id: "MathJax_ZoomWrapper",
+            style: {
+              position: "absolute",
+              top: "0px",
+              left: "0px"
+            }
+          });
           if (!document.body.firstChild) {
             document.body.appendChild(wd)
           }
@@ -299,15 +329,19 @@
             zoom_left = Math.min(Math.max(zoom_left_w, margin_x), max_left);
         zoom.style.left = zoom_left + "px";
 
-        var math_top  = math_offset.top,
-            math_center_y = math_top + Math.floor(bbox.mH / 2),
+        // Can't seem to trust bbox.mH
+        var mspan = $math.find('span.math');
+        var math_top = mspan.length ? Math.min(math_offset.top, mspan.offset().top) 
+                                    : math_offset.top;
+        var math_height = mspan.length ? Math.max(bbox.mH, mspan.height())
+                                       : bbox.mH;
+        var math_center_y = math_top + Math.floor(math_height / 2),
             zoom_top_w  = math_center_y - Math.floor(zoom.offsetHeight / 2),
             viewport_top = $(document).scrollTop(),
             viewport_height = $(window).height(),
             margin_y = Math.floor(Math.min(10, (viewport_height - zoom.offsetHeight) / 2)),
             max_top = viewport_top + viewport_height - margin_y - zoom.offsetHeight,
             zoom_top = Math.min(Math.max(zoom_top_w, viewport_top + margin_y), max_top);
-        if (CONFIG.pubreader) zoom_top = zoom_top - viewport_height;
         zoom.style.top  = zoom_top + "px";
       }
 
