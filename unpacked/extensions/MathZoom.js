@@ -151,16 +151,15 @@
             { id: "MathJax_Zoom", 
               onclick: this.Remove,
               style: {
-                visibility: "hidden", 
+                visibility: "hidden",
                 fontSize: this.settings.zscale,
                 "max-width": Mw+"px", 
                 "max-height": Mh+"px"
               }
             }, 
             [ [ "span",
-                { style: {
-                    display: "inline-block", 
-                    "white-space": "nowrap" }
+                { style: 
+                  { "white-space": "nowrap" }
                 }
               ]
             ]
@@ -210,6 +209,9 @@
       }
 
       var bbox = JAX.Zoom(jax,span,math,Mw,Mh);  // Mw, Mh => max width, height
+      var $ = jQuery;
+      $(span).css('display', 'inline');
+
 
       //
       //  Fix up size and position for browsers with bugs (IE)
@@ -240,9 +242,9 @@
 
       // [klortho] Commenting out the following lines causes some spurious scrollbars to
       // appear sometimes.  But the alternative is worse, often scrollbars don't show up
-      // where they should.
-      //if (zoom.offsetWidth && zoom.offsetWidth < Mw && zoom.offsetHeight < Mh)
-      //   {zoom.style.overflow = "visible"}  // don't show scroll bars if we don't need to
+      // where they should.  Compromise:  added "* 0.9".
+      if (zoom.offsetWidth && zoom.offsetWidth < Mw * 0.9 && zoom.offsetHeight < Mh * 0.9)
+         {zoom.style.overflow = "visible"}  // don't show scroll bars if we don't need to
       
       this.Position(zoom,bbox, math);
       if (this.msieTrapEventBug) {
