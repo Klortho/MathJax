@@ -1,7 +1,8 @@
 /*
  * mathjax-config-reader.js
  * MathJax configuration file customized for PMC PubReader.  This starts with the extensions and
- * jax from TeX-AMS-MML_SVG.js, and then adds PMC custom configurations.
+ * jax from TeX-AMS-MML_SVG.js, and then adds PMC custom configurations, and also the modules that
+ * are specific for TeX have been removed.
  *
  * This is the completely unminified version.
  * The deployed minified version of this, as of 11/6/2014, includes minified versions of the
@@ -23,19 +24,13 @@ MathJax.Hub.Config({"v1.0-compatible": false});
 
 MathJax.Hub.Config({
   extensions: [
-    "tex2jax.js",
     "mml2jax.js",
     "MathEvents.js",
     "MathZoom.js",
     "MathMenu.js",
     "toMathML.js",
-    "TeX/noErrors.js",
-    "TeX/noUndefined.js",
-    "TeX/AMSmath.js",
-    "TeX/AMSsymbols.js"
   ],
   jax: [
-    "input/TeX",
     "input/MathML",
     "output/SVG"
   ],
